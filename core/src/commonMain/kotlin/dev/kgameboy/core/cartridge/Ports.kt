@@ -1,4 +1,4 @@
-package dev.kgameboy.core
+package dev.kgameboy.core.cartridge
 
 /** Supplies the raw bytes of a ROM image. Each platform implements this its own way. */
 fun interface RomSource {

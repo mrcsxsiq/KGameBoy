@@ -1,4 +1,4 @@
-package dev.kgameboy.core
+package dev.kgameboy.core.cartridge
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

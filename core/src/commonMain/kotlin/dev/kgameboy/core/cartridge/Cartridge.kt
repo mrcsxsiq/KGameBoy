@@ -1,4 +1,4 @@
-package dev.kgameboy.core
+package dev.kgameboy.core.cartridge
 
 /** Thrown when a ROM image cannot be parsed as a Game Boy cartridge. */
 class InvalidRomException(message: String) : Exception(message)
@@ -55,6 +55,29 @@ class CartridgeHeader(
                 headerChecksum = u8(CHECKSUM),
                 headerChecksumValid = x == u8(CHECKSUM),
             )
+        }
+    }
+}
+
+/** A parsed ROM image together with the memory bank controller its header asks for. */
+class Cartridge(val header: CartridgeHeader, val mbc: Mbc) {
+    val hasBattery: Boolean get() = header.cartridgeType in BATTERY_TYPES
+
+    companion object {
+        private val BATTERY_TYPES = setOf(0x03, 0x06, 0x09, 0x0D, 0x0F, 0x10, 0x13, 0x1B, 0x1E)
+
+        fun load(rom: ByteArray, save: ByteArray? = null): Cartridge {
+            val header = CartridgeHeader.parse(rom)
+            val ram = ByteArray(header.ramSizeBytes)
+            if (save != null) save.copyInto(ram, endIndex = minOf(save.size, ram.size))
+            val mbc = when (header.cartridgeType) {
+                0x00, 0x08, 0x09 -> RomOnly(rom, ram)
+                0x01, 0x02, 0x03 -> Mbc1(rom, ram)
+                0x0F, 0x10, 0x11, 0x12, 0x13 -> Mbc3(rom, ram)
+                0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E -> Mbc5(rom, ram)
+                else -> throw InvalidRomException("Unsupported cartridge type 0x${header.cartridgeType.toString(16)}")
+            }
+            return Cartridge(header, mbc)
         }
     }
 }
