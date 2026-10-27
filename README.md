@@ -1,12 +1,14 @@
 # KGameBoy
 
-A Game Boy (DMG) emulator written in **Kotlin Multiplatform**, built to learn how emulation works.
+A Game Boy and **Game Boy Color** emulator written in **Kotlin Multiplatform**, built to learn how emulation works.
 The emulator core is plain Kotlin with no platform code, and it runs on a **macOS/JVM desktop** app
 and an **Android** app that share it unchanged.
 
 <p align="center">
-  <img src="docs/img/dmg-acid2.png" alt="KGameBoy rendering the dmg-acid2 test ROM" width="480"><br>
-  <em>KGameBoy running <a href="https://github.com/mattcurrie/dmg-acid2">dmg-acid2</a>, a PPU accuracy test (headless screenshot, 4x).</em>
+  <img src="docs/img/dmg-acid2.png" alt="KGameBoy rendering the dmg-acid2 test ROM" width="320">
+  <img src="docs/img/cgb-acid2.png" alt="KGameBoy rendering the cgb-acid2 test ROM" width="320"><br>
+  <em>KGameBoy running <a href="https://github.com/mattcurrie/dmg-acid2">dmg-acid2</a> (original Game Boy) and
+  <a href="https://github.com/mattcurrie/cgb-acid2">cgb-acid2</a> (Game Boy Color), two PPU tests (headless screenshots, 4x).</em>
 </p>
 
 ## Contents
@@ -403,6 +405,53 @@ The mixer takes one sample every `4194304 / 44100 ≈ 95` cycles, sums the enabl
 applies the master volume, and removes the DC offset of the unsigned DAC with a one-pole high-pass
 filter. `Apu.drain()` hands the accumulated samples to the `AudioSink`.
 
+## Game Boy Color
+
+A cartridge that sets bit 7 of header byte `0143` (`80` = works on both, `C0` = Color only) switches
+the whole machine into **CGB mode**; every other cartridge runs exactly like the original DMG, with
+the green shades. Nothing in the hardware code is duplicated: the same `Cpu`, `Mmu`, `Ppu` and `Apu`
+classes check one `cgb` flag, so the DMG tests keep guarding the shared behaviour.
+
+| Feature | Registers | Where |
+|---------|-----------|-------|
+| Second VRAM bank (tile data and tile attributes) | `FF4F` VBK | `Ppu.vram` is 16 KiB; `Mmu` routes `8000-9FFF` by bank |
+| Eight work RAM banks (bank 0 fixed, 1-7 at `D000`) | `FF70` SVBK | `Mmu.wramIndex` |
+| Background palettes: 8 × 4 colours, RGB555 | `FF68` BCPS, `FF69` BCPD | `Ppu.bgPalette` |
+| Sprite palettes: 8 × 4 colours, RGB555 | `FF6A` OCPS, `FF6B` OCPD | `Ppu.objPalette` |
+| Tile attributes: palette, bank, X/Y flip, priority | second VRAM bank, same map address | `Ppu.renderLine` |
+| Sprite attributes: palette 0-7, VRAM bank | OAM byte 3 | `Ppu.renderSprites` |
+| HDMA: general purpose and one block per HBlank | `FF51`-`FF55` | `Mmu.writeHdma` |
+| Double speed | `FF4D` KEY1 plus the `STOP` instruction | `Mmu.trySpeedSwitch`, `GameBoy.step` |
+
+**Colour RAM.** Each colour is two bytes, `0bbbbbgggggrrrrr`. Writing `BCPD`/`OCPD` stores a byte at
+the index in `BCPS`/`OCPS` (bits 0-5), and bit 7 of the index register makes it auto-increment, so a
+whole palette can be loaded with a run of writes. The 5-bit channels are expanded to 8 bits for the
+ARGB framebuffer.
+
+**Tile attributes.** On CGB the background map has a twin in the second VRAM bank. For each map entry
+that twin holds an attribute byte:
+
+```
+ bit 7   BG-over-sprites priority     bit 6   flip vertically    bit 5   flip horizontally
+ bit 3   tile data VRAM bank          bits 2-0   palette number
+```
+
+**Priority.** On DMG the sprite with the smaller X wins. On CGB only the OAM index counts. LCDC bit 0
+stops switching the background off and becomes a master priority switch: when it is 0, sprites are
+always drawn on top; when it is 1, a sprite's own priority bit or the tile's priority bit can put the
+background in front of any non-zero background colour.
+
+**HDMA.** Writing `FF55` with bit 7 clear copies all requested 16-byte blocks at once (general purpose
+DMA). With bit 7 set it copies one block every time a visible line enters HBlank, which is how games
+stream tile data without tearing; clearing bit 7 again cancels it. `Ppu` reports each HBlank through a
+small callback, so it does not know about DMA.
+
+**Double speed.** A program writes bit 0 of `KEY1`, then executes `STOP`; the CPU toggles between
+4.19 and 8.39 MHz. The CPU and the timer run twice as fast, while the PPU and APU keep their pace.
+`GameBoy.step` therefore gives them half as many cycles, collected in multiples of 4 dots, and
+`runFrame` counts dots (70224 per frame) instead of CPU cycles. Boot values follow the CGB boot ROM
+(for example `A = 0x11`).
+
 ## Input
 
 The joypad is a 2 × 4 matrix read through register `P1` (`FF00`). The game selects a row by writing a
@@ -447,7 +496,7 @@ app falls back to timed sleeping.
 
 ## Testing
 
-`./gradlew :core:allTests` runs the suites below on the JVM, and the platform-independent ones (93 tests) again on Kotlin/Wasm under Node.js, which checks that the core behaves the same in the browser:
+`./gradlew :core:allTests` runs the suites below on the JVM, and the platform-independent ones (111 tests) again on Kotlin/Wasm under Node.js, which checks that the core behaves the same in the browser:
 
 | Suite | What it checks |
 |-------|----------------|
@@ -460,6 +509,7 @@ app falls back to timed sleeping.
 | `ApuTest` | Sample rate, channels, length counter, panning, power-off behaviour |
 | `MmuTest` | Address routing, echo RAM, I/O registers, OAM DMA |
 | `SerialTest` | Transfer and interrupt |
+| `CgbTest` | CGB header flag, VRAM/WRAM banking, palette auto-increment, tile and sprite attributes, priority rules, general and HBlank HDMA, double speed |
 | `RomIntegrationTest` | Blargg's `cpu_instrs` (all 11 sub-tests) and `instr_timing` run headless |
 
 The ROM tests read the verdict from the **serial port**, which is how Blargg's ROMs print results, so
@@ -470,6 +520,7 @@ no screen is needed. They are skipped when the ROMs are not on disk (see below).
 | ROM | Where | License |
 |-----|-------|---------|
 | `roms/dmg-acid2.gb` | Included | MIT (Matt Currie) |
+| `roms/cgb-acid2.gbc` | Included | MIT (Matt Currie) |
 | Blargg `cpu_instrs`, `instr_timing` | Not included: download into `roms/third-party/` | No clear redistribution license |
 
 See [`roms/README.md`](roms/README.md) for the download command. Commercial games are not
@@ -505,12 +556,12 @@ KGameBoy/
 
 This is a learning project, so some hardware details are simplified:
 
-- **DMG only.** No Game Boy Color, no Super Game Boy.
+- **Game Boy Color is supported, Super Game Boy is not.** Colour output uses a plain RGB555 to RGB888 expansion, without the colour correction a real CGB screen applies. A DMG-only cartridge keeps the green shades instead of getting the boot ROM's automatic colourisation. The speed switch and HDMA do not stall the CPU, and the CGB-only infrared port is absent.
 - **Instruction-level timing.** A whole instruction runs, then the other components catch up. This
   passes `cpu_instrs` and `instr_timing` but not sub-instruction tests such as Mooneye's.
 - **PPU:** a line is drawn at once when mode 3 ends (no mid-line register effects), mode-3 length is
   fixed, and VRAM/OAM are not locked during drawing.
-- **OAM DMA** copies instantly instead of taking 160 cycles.
+- **OAM DMA** and general-purpose HDMA copy instantly instead of taking 160 cycles.
 - **MBC3 real-time clock** registers exist but do not advance. MBC2 is not implemented.
 - **APU** is not cycle-exact (no extra-length-clock quirks, no zombie-mode envelope).
 - No boot ROM, no save states, no link cable.

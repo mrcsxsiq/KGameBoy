@@ -5,8 +5,9 @@
 | File | Source | License |
 |------|--------|---------|
 | `dmg-acid2.gb` | [mattcurrie/dmg-acid2](https://github.com/mattcurrie/dmg-acid2) | MIT |
+| `cgb-acid2.gbc` | [mattcurrie/cgb-acid2](https://github.com/mattcurrie/cgb-acid2) v1.1 | MIT |
 
-`dmg-acid2` is a PPU rendering test: a correct emulator draws a smiling face.
+`dmg-acid2` and `cgb-acid2` are PPU rendering tests: a correct emulator draws a smiling face, in green shades for DMG and in colour for CGB.
 
 ## Not included (download locally)
 
