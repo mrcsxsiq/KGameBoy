@@ -7,7 +7,7 @@ import dev.kgameboy.core.audio.Apu
 import dev.kgameboy.core.audio.AudioSink
 
 /**
- * Streams samples to an AudioTrack. The blocking write paces the emulator: 735 samples per frame
+ * Streams samples to an AudioTrack. The blocking write paces the emulator: about 738 samples per frame
  * at 44100 Hz is exactly 59.73 frames per second.
  */
 class AudioOutput : AudioSink {

@@ -8,7 +8,7 @@ import javax.sound.sampled.SourceDataLine
 
 /**
  * Plays samples through the default output device. The write blocks when the device buffer is
- * full, which makes the audio clock the pace-maker of the emulator: 735 samples per frame at
+ * full, which makes the audio clock the pace-maker of the emulator: about 738 samples per frame at
  * 44100 Hz is exactly 59.73 frames per second.
  */
 class SwingAudioSink : AudioSink, AutoCloseable {
