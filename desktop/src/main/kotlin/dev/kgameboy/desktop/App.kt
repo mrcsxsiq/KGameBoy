@@ -3,6 +3,7 @@ package dev.kgameboy.desktop
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
@@ -52,12 +53,21 @@ private fun shortcut(key: Key) = KeyShortcut(key, meta = IS_MAC, ctrl = !IS_MAC)
 fun runApp(initialRom: File?) = application {
     val controller = remember { EmulatorController().also { c -> initialRom?.let(c::load) } }
     var scale by remember { mutableStateOf(4) }
+    var showPad by remember { mutableStateOf(false) }
     val windowState = remember { WindowState(size = DpSize((Ppu.WIDTH * 4).dp, (Ppu.HEIGHT * 4).dp)) }
     var dialog by remember { mutableStateOf<String?>(null) }
 
+    fun windowSize(s: Int, pad: Boolean) =
+        DpSize((Ppu.WIDTH * s).dp, (Ppu.HEIGHT * s).dp + if (pad) VIRTUAL_PAD_HEIGHT else 0.dp)
+
     fun applyScale(s: Int) {
         scale = s
-        windowState.size = DpSize((Ppu.WIDTH * s).dp, (Ppu.HEIGHT * s).dp)
+        windowState.size = windowSize(s, showPad)
+    }
+
+    fun setPad(visible: Boolean) {
+        showPad = visible
+        windowState.size = windowSize(scale, visible)
     }
 
     fun quit() { controller.shutdown(); exitApplication() }
@@ -92,6 +102,7 @@ fun runApp(initialRom: File?) = application {
                 Item("Reset", shortcut = shortcut(Key.R), enabled = controller.isLoaded(), onClick = controller::reset)
             }
             Menu("View") {
+                CheckboxItem("Virtual controller", checked = showPad, onCheckedChange = ::setPad)
                 Menu("Window size") {
                     for (s in 1..6) RadioButtonItem("${s}x", selected = scale == s, onClick = { applyScale(s) })
                 }
@@ -102,7 +113,10 @@ fun runApp(initialRom: File?) = application {
             }
         }
 
-        Screen(controller)
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f)) { Screen(controller) }
+            if (showPad) VirtualPad(controller)
+        }
 
         controller.error?.let { message ->
             InfoDialog("Cannot load ROM", message) { controller.error = null }

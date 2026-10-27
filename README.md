@@ -66,7 +66,7 @@ The desktop app has a menu bar (in the macOS screen menu bar, or in the window o
 |------|-------|
 | File | Open ROM… (`Cmd/Ctrl+O`), Close ROM (`Cmd/Ctrl+W`), Exit (Windows/Linux) |
 | Emulation | Pause (`Cmd/Ctrl+P`), Reset (`Cmd/Ctrl+R`) |
-| View | Window size 1x to 6x |
+| View | Virtual controller (on-screen Game Boy pad below the screen, clickable with the mouse), Window size 1x to 6x |
 | Help | Controls, About |
 
 On Android the same buttons are drawn on screen and support multi-touch.
