@@ -11,11 +11,17 @@ class CartridgeHeader(
     val ramSizeBytes: Int,
     val headerChecksum: Int,
     val headerChecksumValid: Boolean,
+    /** Byte at 0x0143: 0x80 = works on Game Boy Color and DMG, 0xC0 = Game Boy Color only. */
+    val cgbFlag: Int = 0,
 ) {
+    /** True when the cartridge asks for Game Boy Color features. */
+    val cgbSupported: Boolean get() = cgbFlag and 0x80 != 0
+
     companion object {
         const val HEADER_END = 0x014F
         private const val TITLE_START = 0x0134
         private const val TITLE_END = 0x0143
+        private const val CGB_FLAG = 0x0143
         private const val TYPE = 0x0147
         private const val ROM_SIZE = 0x0148
         private const val RAM_SIZE = 0x0149
@@ -30,8 +36,11 @@ class CartridgeHeader(
             }
             fun u8(i: Int) = rom[i].toInt() and 0xFF
 
+            val cgbFlag = u8(CGB_FLAG)
+            // On CGB cartridges byte 0x0143 is a flag, not part of the title.
+            val titleEnd = if (cgbFlag and 0x80 != 0) TITLE_END - 1 else TITLE_END
             val title = buildString {
-                for (i in TITLE_START..TITLE_END) {
+                for (i in TITLE_START..titleEnd) {
                     val c = u8(i)
                     if (c == 0) break
                     append(c.toChar())
@@ -54,6 +63,7 @@ class CartridgeHeader(
                 ramSizeBytes = RAM_SIZES[ramCode],
                 headerChecksum = u8(CHECKSUM),
                 headerChecksumValid = x == u8(CHECKSUM),
+                cgbFlag = cgbFlag,
             )
         }
     }
