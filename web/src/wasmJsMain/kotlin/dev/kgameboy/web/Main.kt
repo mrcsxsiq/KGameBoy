@@ -95,8 +95,9 @@ private fun WebApp() {
             Text(controller.status, color = GREEN)
         }
         Screen(controller, Modifier.weight(1f))
+        TouchPad(controller)
         Text(
-            "Arrows: D-pad   X: A   Z: B   Enter: Start   Backspace/Shift: Select",
+            "Keyboard: arrows, X = A, Z = B, Enter = Start, Backspace/Shift = Select. Touch pad works too.",
             color = GREEN, modifier = Modifier.padding(8.dp),
         )
     }

@@ -515,7 +515,7 @@ This is a learning project, so some hardware details are simplified:
 - **APU** is not cycle-exact (no extra-length-clock quirks, no zombie-mode envelope).
 - No boot ROM, no save states, no link cable.
 - The Android app compiles and packages a debug APK but has not been exercised on a device.
-- The web app runs the emulator on the page's single thread and paces it with `requestAnimationFrame`; audio is scheduled through Web Audio and starts after the first click or key press (browser autoplay rule). Battery saves are not persisted in the browser, and there is no on-screen touch pad yet (keyboard only).
+- The web app runs the emulator on the page's single thread and paces it with `requestAnimationFrame`; audio is scheduled through Web Audio and starts after the first click or key press (browser autoplay rule). Battery saves are not persisted in the browser. An on-screen touch pad (D-pad, A, B, Select, Start) works with multi-touch, but its input was only checked visually, not by pressing keys.
 
 ## References
 
