@@ -11,7 +11,7 @@ import javax.sound.sampled.SourceDataLine
  * full, which makes the audio clock the pace-maker of the emulator: about 738 samples per frame at
  * 44100 Hz is exactly 59.73 frames per second.
  */
-class SwingAudioSink : AudioSink, AutoCloseable {
+class JavaSoundAudioSink : AudioSink, AutoCloseable {
     private val line: SourceDataLine? = try {
         val format = AudioFormat(Apu.SAMPLE_RATE.toFloat(), 16, 2, true, false)
         AudioSystem.getSourceDataLine(format).also { it.open(format, 4 * 1024 * 4); it.start() }
@@ -32,6 +32,9 @@ class SwingAudioSink : AudioSink, AutoCloseable {
         }
         l.write(bytes, 0, count * 2)
     }
+
+    /** Drops queued samples, e.g. when switching ROMs. */
+    fun flush() { line?.flush() }
 
     override fun close() { line?.stop(); line?.close() }
 }

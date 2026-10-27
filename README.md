@@ -56,6 +56,15 @@ Android SDK (a git-ignored `local.properties` with `sdk.dir=...` points Gradle a
 | `Enter` | Start |
 | `Backspace` / `Shift` | Select |
 
+The desktop app has a menu bar (in the macOS screen menu bar, or in the window on Windows/Linux):
+
+| Menu | Items |
+|------|-------|
+| File | Open ROM… (`Cmd/Ctrl+O`), Close ROM (`Cmd/Ctrl+W`), Exit (Windows/Linux) |
+| Emulation | Pause (`Cmd/Ctrl+P`), Reset (`Cmd/Ctrl+R`) |
+| View | Window size 1x to 6x |
+| Help | Controls, About |
+
 On Android the same buttons are drawn on screen and support multi-touch.
 Battery-backed saves are written to a `.sav` file next to the ROM (desktop) or to the app's private
 storage (Android).
@@ -100,7 +109,7 @@ outside world is reached through small **ports** (interfaces); each platform imp
 ```mermaid
 flowchart TB
     subgraph Frontends
-        D[":desktop (Swing, JVM)<br/>window, keyboard, javax.sound"]
+        D[":desktop (Compose Desktop, JVM)<br/>window, menu bar, keyboard, Java Sound"]
         A[":android (Views)<br/>touch pad, AudioTrack"]
     end
     subgraph Ports["Ports (interfaces in :core)"]
@@ -479,7 +488,7 @@ KGameBoy/
 │       │   └── serial/        Serial
 │       ├── commonTest/        Unit tests
 │       └── jvmTest/           ROM integration tests
-├── desktop/                   Swing frontend (macOS and other JVMs)
+├── desktop/                   Compose Desktop frontend (macOS and other JVMs)
 ├── android/                   Android frontend (Views, AudioTrack)
 ├── roms/                      Demo ROM and licenses
 └── docs/img/                  Screenshots

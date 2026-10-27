@@ -94,7 +94,7 @@ class Cpu(private val bus: Bus, private val interrupts: Interrupts) {
     }
 
     private fun serviceInterrupt(pending: Int): Int {
-        val bit = Integer.numberOfTrailingZeros(pending)
+        val bit = pending.countTrailingZeroBits()
         ime = false
         interrupts.flags = interrupts.flags and (1 shl bit).inv()
         push(pc)
