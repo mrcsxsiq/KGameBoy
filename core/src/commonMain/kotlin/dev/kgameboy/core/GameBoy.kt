@@ -26,10 +26,24 @@ class GameBoy(
     val timer = Timer(interrupts)
     val joypad = Joypad(interrupts)
     val serial = Serial(interrupts)
-    val ppu = Ppu(interrupts)
+    /** True when the cartridge supports Game Boy Color; the machine then behaves like a CGB. */
+    val cgb = cartridge.header.cgbSupported
+    val ppu = Ppu(interrupts, cgb)
     val apu = Apu()
-    val mmu = Mmu(cartridge, interrupts, timer, joypad, serial, ppu, apu)
+    val mmu = Mmu(cartridge, interrupts, timer, joypad, serial, ppu, apu, cgb)
     val cpu = Cpu(mmu, interrupts)
+
+    init {
+        if (cgb) { // registers left behind by the CGB boot ROM
+            cpu.a = 0x11; cpu.f = 0x80; cpu.b = 0x00; cpu.c = 0x00
+            cpu.d = 0xFF; cpu.e = 0x56; cpu.h = 0x00; cpu.l = 0x0D
+        }
+        cpu.onStop = mmu::trySpeedSwitch
+    }
+
+    // Dots (PPU/APU cycles) produced by the last step, and CPU cycles not yet turned into dots.
+    private var lastDots = 0
+    private var pendingCpuCycles = 0
 
     /** Total T-cycles executed since power-on. */
     var totalCycles = 0L
@@ -38,17 +52,28 @@ class GameBoy(
     /** Runs one instruction and advances all components. Returns the cycles it took. */
     fun step(): Int {
         val cycles = cpu.step()
+        // In double speed the CPU and timer run twice as fast, while the PPU and APU keep their
+        // pace, so they receive half as many cycles (in multiples of 4 dots).
+        val dots = if (mmu.doubleSpeed) {
+            pendingCpuCycles += cycles
+            val whole = pendingCpuCycles - pendingCpuCycles % 8
+            pendingCpuCycles -= whole
+            whole / 2
+        } else {
+            pendingCpuCycles = 0
+            cycles
+        }
         timer.tick(cycles)
-        ppu.tick(cycles)
-        apu.tick(cycles)
+        if (dots > 0) { ppu.tick(dots); apu.tick(dots) }
+        lastDots = dots
         totalCycles += cycles
         return cycles
     }
 
-    /** Runs roughly one video frame (70224 cycles), then delivers the picture and audio. */
+    /** Runs one video frame (70224 dots, which is twice as many CPU cycles in double speed), then delivers the picture and audio. */
     fun runFrame() {
-        var cycles = 0
-        while (cycles < Ppu.FRAME_DOTS) cycles += step()
+        var dots = 0
+        while (dots < Ppu.FRAME_DOTS) { step(); dots += lastDots }
         ppu.frameReady = false
         video.onFrame(ppu.framebuffer)
         apu.drain(audio)

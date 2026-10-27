@@ -18,6 +18,8 @@ class Cpu(private val bus: Bus, private val interrupts: Interrupts) {
     var pc = 0x0100
 
     var ime = false
+    /** Called when STOP executes; the Game Boy Color uses it to switch CPU speed. */
+    var onStop: () -> Unit = {}
     var halted = false
     private var eiPending = false
     private var haltBug = false
@@ -178,7 +180,7 @@ class Cpu(private val bus: Bus, private val interrupts: Interrupts) {
         }
         return when (op) {
             0x00 -> 4
-            0x10 -> { fetch(); 4 } // STOP
+            0x10 -> { fetch(); onStop(); 4 } // STOP
             0x08 -> { val addr = fetch16(); write(addr, sp and 0xFF); write(addr + 1, sp shr 8); 20 }
             0x18 -> jr(true)
             0x20, 0x28, 0x30, 0x38 -> jr(condition((op shr 3) and 3))
