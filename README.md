@@ -44,6 +44,10 @@ Android SDK (a git-ignored `local.properties` with `sdk.dir=...` points Gradle a
 # Unit and integration tests
 ./gradlew :core:allTests
 
+# Web (Kotlin/Wasm in the browser): dev server with live reload, or a static bundle
+./gradlew :web:wasmJsBrowserDevelopmentRun
+./gradlew :web:wasmJsBrowserDistribution    # -> web/build/dist/wasmJs/productionExecutable
+
 # Android debug APK -> android/build/outputs/apk/debug/android-debug.apk
 ./gradlew :android:assembleDebug
 ```
@@ -111,6 +115,7 @@ flowchart TB
     subgraph Frontends
         D[":desktop (Compose Desktop, JVM)<br/>window, menu bar, keyboard, Java Sound"]
         A[":android (Views)<br/>touch pad, AudioTrack"]
+        W[":web (Compose, Kotlin/Wasm)<br/>canvas, keyboard, Web Audio"]
     end
     subgraph Ports["Ports (interfaces in :core)"]
         V[VideoSink]
@@ -132,6 +137,7 @@ flowchart TB
     end
     D --> Ports
     A --> Ports
+    W --> Ports
     Ports --> GB
     GB --> CPU
     CPU --> MMU
@@ -441,7 +447,7 @@ app falls back to timed sleeping.
 
 ## Testing
 
-`./gradlew :core:allTests` runs about 95 tests:
+`./gradlew :core:allTests` runs the suites below on the JVM, and the platform-independent ones (93 tests) again on Kotlin/Wasm under Node.js, which checks that the core behaves the same in the browser:
 
 | Suite | What it checks |
 |-------|----------------|
@@ -490,6 +496,7 @@ KGameBoy/
 │       └── jvmTest/           ROM integration tests
 ├── desktop/                   Compose Desktop frontend (macOS and other JVMs)
 ├── android/                   Android frontend (Views, AudioTrack)
+├── web/                       Browser frontend (Compose Multiplatform, Kotlin/Wasm)
 ├── roms/                      Demo ROM and licenses
 └── docs/img/                  Screenshots
 ```
@@ -508,6 +515,7 @@ This is a learning project, so some hardware details are simplified:
 - **APU** is not cycle-exact (no extra-length-clock quirks, no zombie-mode envelope).
 - No boot ROM, no save states, no link cable.
 - The Android app compiles and packages a debug APK but has not been exercised on a device.
+- The web app runs the emulator on the page's single thread and paces it with `requestAnimationFrame`; audio is scheduled through Web Audio and starts after the first click or key press (browser autoplay rule). Battery saves are not persisted in the browser, and there is no on-screen touch pad yet (keyboard only).
 
 ## References
 
