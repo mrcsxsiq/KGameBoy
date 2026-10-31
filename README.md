@@ -524,7 +524,7 @@ no screen is needed. They are skipped when the ROMs are not on disk (see below).
 
 ## Releases
 
-Pushing a tag `vMAJOR.MINOR.PATCH` (for example `v1.0.0`) runs `.github/workflows/release.yml`, which builds the macOS DMG, the web site (zip), the Android debug APK and, if the `:cli` module exists, its distribution zip, then publishes a GitHub Release with auto-generated notes. Tags with a suffix (`-rc.1`, `-beta.1`) are marked as pre-releases. The workflow can also be run manually against an existing tag. The APK is debug-signed, so no secrets are needed; a Play-ready release APK would require a keystore configured as repository secrets. The tag is checked only for SemVer format, since the project has no single version source yet (`versionName` in `android/` and `packageVersion` in `desktop/` are set separately). `.github/workflows/ci.yml` runs the build and `:core:allTests` on pull requests and pushes to `main`.
+Pushing a tag `vMAJOR.MINOR.PATCH` (for example `v1.0.0`) runs `.github/workflows/release.yml`, which builds the macOS DMG, the web site (zip), the Android debug APK and the `:cli` distribution zip, then publishes a GitHub Release with auto-generated notes. Tags with a suffix (`-rc.1`, `-beta.1`) are marked as pre-releases. The workflow can also be run manually against an existing tag. The APK is debug-signed, so no secrets are needed; a Play-ready release APK would require a keystore configured as repository secrets. The tag is checked only for SemVer format, since the project has no single version source yet (`versionName` in `android/`, `packageVersion` in `desktop/` and `version` in `cli/` are set separately). `.github/workflows/ci.yml` runs the build and `:core:allTests` on pull requests and pushes to `main`.
 
 ## ROMs and licenses
 
@@ -557,6 +557,7 @@ KGameBoy/
 │       ├── commonTest/        Unit tests
 │       └── jvmTest/           ROM integration tests
 ├── desktop/                   Compose Desktop frontend (macOS and other JVMs)
+├── cli/                       Command-line launcher (`kgameboy <rom>`), built on :desktop
 ├── android/                   Android frontend (Views, AudioTrack)
 ├── web/                       Browser frontend (Compose Multiplatform, Kotlin/Wasm)
 ├── roms/                      Demo ROM and licenses
