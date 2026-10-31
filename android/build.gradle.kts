@@ -10,8 +10,10 @@ android {
         applicationId = "dev.kgameboy"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        val semver = rootProject.property("kgameboy.version") as String
+        val (major, minor, patch) = semver.substringBefore('-').substringBefore('+').split('.').map(String::toInt)
+        versionCode = major * 10000 + minor * 100 + patch
+        versionName = semver
     }
 
     compileOptions {

@@ -21,7 +21,7 @@ application {
 }
 
 // CLI version, exposed to the code through a filtered resource (version.properties).
-version = "0.1.0"
+version = rootProject.property("kgameboy.version") as String
 tasks.processResources {
     val v = project.version.toString()
     inputs.property("version", v)

@@ -32,11 +32,21 @@ jobs:
     outputs:
       prerelease: ${{ steps.check.outputs.prerelease }}
     steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
       - name: Validate tag
         id: check
         run: |
           if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
             echo "::error::Tag '$TAG' is not a valid SemVer tag (vMAJOR.MINOR.PATCH[-prerelease])"
+            exit 1
+          fi
+          # The tag may name a ref other than the checked-out one on manual runs,
+          # so compare against the version file at that tag.
+          VERSION=$(git show "$TAG:gradle.properties" | sed -n 's/^kgameboy.version=//p')
+          if [[ "$TAG" != "v$VERSION" ]]; then
+            echo "::error::Tag '$TAG' does not match kgameboy.version ($VERSION) in gradle.properties"
             exit 1
           fi
           if [[ "$TAG" == *-* ]]; then

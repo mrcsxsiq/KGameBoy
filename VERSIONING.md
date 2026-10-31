@@ -34,18 +34,16 @@ publish a new PATCH instead.
 
 ## Where the version lives
 
-The tag is the source of truth. These files must carry the same number as the tag (without the `v`):
+The tag is the source of truth, and the version lives in one place: `kgameboy.version` in `gradle.properties`
+(without the `v`). Everything else derives from it:
 
-| File | Field | Notes |
-|------|-------|-------|
-| `desktop/build.gradle.kts` | `packageVersion` (in the `nativeDistributions` block) | Used for the native installers. Must be `MAJOR.MINOR.PATCH` with `MAJOR >= 1`, so strip any pre-release suffix here (macOS `.dmg` requires it) |
-| `android/build.gradle.kts` | `versionName` | The full SemVer string, suffix included |
-| `android/build.gradle.kts` | `versionCode` | Integer that **must increase on every release**, including pre-releases. Use `MAJOR * 10000 + MINOR * 100 + PATCH` (`1.4.2` -> `10402`) and add a counter for pre-releases of the same version, or simply increment by one |
+| Consumer | Derived value |
+|----------|---------------|
+| `cli` | `version`, printed by `kgameboy --version` |
+| `android` | `versionName` is the full SemVer string; `versionCode` is `MAJOR * 10000 + MINOR * 100 + PATCH` (`1.4.2` -> `10402`). Pre-releases of the same `X.Y.Z` share a code, so bump the patch number if one must be installed over another |
+| `desktop` | `packageVersion` is `MAJOR.MINOR.PATCH` without suffix; macOS `.dmg` requires `MAJOR >= 1`, so `0.y.z` ships as `1.y.z` |
 
 `:core` and `:web` do not carry a version of their own.
-
-> Current state: `desktop` is at `1.0.0` and `android` at `0.1.0` (`versionCode = 1`). Align them in the first
-> release commit.
 
 ## Release flow
 
@@ -54,7 +52,7 @@ yet (only `.github/dependabot.yml`), so this section describes the intended flow
 should follow.
 
 1. Make sure `main` is green: `./gradlew :core:allTests`.
-2. Bump the version in the files above in a commit named `Release vX.Y.Z`, through a normal pull request.
+2. Bump `kgameboy.version` in `gradle.properties` in a commit named `Release vX.Y.Z`, through a normal pull request.
 3. After the PR is merged, tag the merge commit and push the tag:
 
    ```sh
@@ -63,7 +61,7 @@ should follow.
    ```
 
 4. The workflow triggers on `push: tags: ['v*']`. It should:
-   - check that the tag matches `packageVersion` / `versionName`, and fail otherwise;
+   - check that the tag matches `kgameboy.version`, and fail otherwise;
    - run `./gradlew :core:allTests`;
    - build the artifacts (`:desktop:packageDistributionForCurrentOS`, `:android:assembleRelease`,
      `:web:wasmJsBrowserDistribution`);

@@ -26,7 +26,10 @@ compose.desktop {
         nativeDistributions {
             targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg)
             packageName = "KGameBoy"
-            packageVersion = "1.0.0"
+            // macOS packaging requires MAJOR >= 1 and no suffix, so 0.y.z ships as 1.y.z
+            val (major, minor, patch) = (rootProject.property("kgameboy.version") as String)
+                .substringBefore('-').substringBefore('+').split('.').map(String::toInt)
+            packageVersion = "${maxOf(major, 1)}.$minor.$patch"
         }
     }
 }
