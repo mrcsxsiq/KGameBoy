@@ -1,0 +1,169 @@
+# Publishes a GitHub Release when a `v*` tag is pushed (or on manual dispatch
+# with the name of an existing tag). Tags with a suffix (v1.2.0-rc.1,
+# v1.2.0-beta.2) are published as pre-releases.
+#
+# Assets: macOS DMG, web site zip, Android debug APK (debug-signed; no secrets
+# needed) and, when the :cli module exists, its distribution zip.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to release (e.g. v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      prerelease: ${{ steps.check.outputs.prerelease }}
+    steps:
+      - name: Validate tag
+        id: check
+        run: |
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag '$TAG' is not a valid SemVer tag (vMAJOR.MINOR.PATCH[-prerelease])"
+            exit 1
+          fi
+          if [[ "$TAG" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  desktop:
+    needs: validate
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v6
+      - run: ./gradlew :desktop:packageDmg --stacktrace
+      - name: Rename DMG
+        run: |
+          mkdir -p dist
+          cp desktop/build/compose/binaries/main/dmg/*.dmg "dist/KGameBoy-${TAG}-macos.dmg"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop
+          path: dist/*.dmg
+          if-no-files-found: error
+
+  web:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v6
+      - run: ./gradlew :web:wasmJsBrowserDistribution --stacktrace
+      - name: Zip site
+        run: |
+          mkdir -p dist
+          (cd web/build/dist/wasmJs/productionExecutable && zip -r "$GITHUB_WORKSPACE/dist/KGameBoy-${TAG}-web.zip" .)
+      - uses: actions/upload-artifact@v7
+        with:
+          name: web
+          path: dist/*.zip
+          if-no-files-found: error
+
+  android:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v6
+      # Debug APK: signed with the auto-generated debug keystore, so no secrets
+      # are required. A Play-ready release APK would need a keystore.
+      - run: ./gradlew :android:assembleDebug --stacktrace
+      - name: Rename APK
+        run: |
+          mkdir -p dist
+          cp android/build/outputs/apk/debug/android-debug.apk "dist/KGameBoy-${TAG}-android-debug.apk"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android
+          path: dist/*.apk
+          if-no-files-found: error
+
+  cli:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - name: Detect :cli module
+        id: detect
+        run: |
+          if grep -q '":cli"' settings.gradle.kts; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No :cli module in this tag; skipping CLI asset"
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - if: steps.detect.outputs.present == 'true'
+        uses: gradle/actions/setup-gradle@v6
+      - if: steps.detect.outputs.present == 'true'
+        run: |
+          ./gradlew :cli:distZip --stacktrace
+          mkdir -p dist
+          for f in cli/build/distributions/*.zip; do
+            cp "$f" "dist/KGameBoy-${TAG}-cli-$(basename "$f")"
+          done
+      - if: steps.detect.outputs.present == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: cli
+          path: dist/*.zip
+          if-no-files-found: error
+
+  publish:
+    needs: [validate, desktop, web, android, cli]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - run: ls -l dist
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ env.TAG }}
+          files: dist/*
+          generate_release_notes: true
+          prerelease: ${{ needs.validate.outputs.prerelease == 'true' }}
