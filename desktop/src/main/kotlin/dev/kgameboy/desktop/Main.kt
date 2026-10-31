@@ -20,14 +20,14 @@ fun main(args: Array<String>) {
         i++
     }
     if (screenshot != null) {
-        headless(romPath ?: error("A ROM path is required"), frames.coerceAtLeast(1), screenshot)
+        runHeadless(romPath ?: error("A ROM path is required"), frames.coerceAtLeast(1), screenshot)
         return
     }
     runApp(romPath?.let(::File))
 }
 
 /** Runs [frames] frames without a window and writes the last one as a 4x PNG. */
-private fun headless(romPath: String, frames: Int, out: String) {
+fun runHeadless(romPath: String, frames: Int, out: String) {
     val rom = File(romPath)
     val gb = GameBoy(Cartridge.load(FileRomSource(rom).load(), FileSaveStore(rom).read()), video = {}, audio = { _, _ -> })
     repeat(frames) { gb.runFrame() }
