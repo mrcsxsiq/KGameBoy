@@ -28,7 +28,8 @@ and an **Android** app that share it unchanged.
 13. [ROMs and licenses](#roms-and-licenses)
 14. [Project layout](#project-layout)
 15. [Known limitations](#known-limitations)
-16. [References](#references)
+16. [Contributing and versioning](#contributing-and-versioning)
+17. [References](#references)
 
 ## Quick start
 
@@ -567,6 +568,11 @@ This is a learning project, so some hardware details are simplified:
 - No boot ROM, no save states, no link cable.
 - The Android app compiles and packages a debug APK but has not been exercised on a device.
 - The web app runs the emulator on the page's single thread and paces it with `requestAnimationFrame`; audio is scheduled through Web Audio and starts after the first click or key press (browser autoplay rule). Battery saves are not persisted in the browser. An on-screen touch pad (D-pad, A, B, Select, Start) works with multi-touch, but its input was only checked visually, not by pressing keys.
+
+## Contributing and versioning
+
+- [`CONTRIBUTING.md`](CONTRIBUTING.md): setup, build and test commands, code style, ROM policy, pull requests and commit messages.
+- [`VERSIONING.md`](VERSIONING.md): Semantic Versioning rules, `vX.Y.Z` tags, where the version lives and the release flow.
 
 ## References
 
