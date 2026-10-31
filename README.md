@@ -44,6 +44,12 @@ Android SDK (a git-ignored `local.properties` with `sdk.dir=...` points Gradle a
 # Render N frames without a window and save a 4x PNG (used for the screenshots here)
 ./gradlew :desktop:run -Prom=roms/dmg-acid2.gb -Pframes=120 -Pscreenshot=docs/img/out.png
 
+# Command line: build once, then run `kgameboy <rom>` (also `--help`, `--version`)
+./gradlew :cli:installDist                  # -> cli/build/install/kgameboy/bin/kgameboy
+cli/build/install/kgameboy/bin/kgameboy roms/dmg-acid2.gb
+cli/build/install/kgameboy/bin/kgameboy roms/dmg-acid2.gb --frames 120 --screenshot out.png  # headless
+./gradlew :cli:distZip                      # -> cli/build/distributions/kgameboy-0.1.0.zip
+
 # Unit and integration tests
 ./gradlew :core:allTests
 
